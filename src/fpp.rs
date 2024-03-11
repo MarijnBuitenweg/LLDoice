@@ -9,6 +9,7 @@ type Fpnum = usize;
 
 /// A fixed point probability type.
 /// Value is stored as an integer, representing a probability of value/integer::MAX.
+/// Should in theory be more efficient than using floating point numbers.
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Hash)]
 pub struct Fpp(Fpnum);
 

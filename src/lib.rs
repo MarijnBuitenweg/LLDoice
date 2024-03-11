@@ -1,6 +1,10 @@
+#![feature(iter_map_windows)]
 mod error;
 mod fpp;
 mod pdf;
+
+use std::ops::DivAssign;
+use std::ops::MulAssign;
 
 pub use error::LlDoiceError;
 pub use fpp::Fpp;

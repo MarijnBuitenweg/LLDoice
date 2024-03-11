@@ -1,6 +1,6 @@
 use std::{
     collections::BTreeMap,
-    ops::{Add, AddAssign, Div, Mul, MulAssign, Range},
+    ops::{Add, AddAssign, Div, Mul, MulAssign, Range, Sub},
 };
 
 use num::{FromPrimitive, Num, One, ToPrimitive};
@@ -9,6 +9,8 @@ use crate::LlDoiceError;
 
 pub type Sample = isize;
 
+/// A discrete probability distribution, based on a BTreeMap.
+/// This may not be the single most efficient way of storing a PDF, but it is simple and easy to work with for now.
 pub struct PDF<T, const SOUND: bool> {
     data: BTreeMap<Sample, T>,
 }
@@ -68,6 +70,13 @@ impl<T: Number, const SOUND: bool> PDF<T, SOUND> {
         }
     }
 
+    /// Simply assumes that the PDF is sound
+    /// # Safety
+    /// Is only safe is the PDF is actually sound
+    pub unsafe fn assert_soundness(self) -> PDF<T, true> {
+        PDF { data: self.data }
+    }
+
     /// Convolute the PDF with itself n times.
     pub fn autoconvolute(self, n: usize) -> Self
     where
@@ -110,6 +119,124 @@ impl<T: Number, const SOUND: bool> PDF<T, SOUND> {
                 .or_insert_with(|| v.clone());
         }
         PDF { data: self.data }
+    }
+
+    pub fn square_probabilities(mut self) -> PDF<T, false>
+    where
+        for<'a> T: MulAssign<&'a T>,
+    {
+        for v in self.data.values_mut() {
+            *v *= &v.clone();
+        }
+        PDF { data: self.data }
+    }
+
+    /// Makes all probabilities equal 1- itself
+    pub fn invert_probabilities(&mut self)
+    where
+        for<'a> T: Sub<&'a T, Output = T>,
+    {
+        for v in self.data.values_mut() {
+            *v = T::one() - &*v;
+        }
+    }
+
+    /// Return the cumulative version of this PDf.
+    pub fn cumulative(&self) -> PDF<T, false>
+    where
+        for<'a> T: AddAssign<&'a T>,
+    {
+        PDF {
+            data: self
+                .data
+                .iter()
+                .scan(T::zero(), |state, (k, v)| {
+                    *state += v;
+                    Some((*k, state.clone()))
+                })
+                .collect(),
+        }
+    }
+
+    /// Return the reverse cumulative version of this PDf.
+    /// P(X<x)
+    pub fn cumulative_exclusive(&self) -> PDF<T, false>
+    where
+        for<'a> T: AddAssign<&'a T>,
+    {
+        PDF {
+            data: self
+                .data
+                .iter()
+                .scan(T::zero(), |state, (k, v)| {
+                    let val = state.clone();
+                    *state += v;
+                    Some((*k, val))
+                })
+                .collect(),
+        }
+    }
+
+    /// Return the reverse cumulative version of this PDf.
+    /// P(X>=x)
+    pub fn rev_cumulative(&self) -> PDF<T, false>
+    where
+        for<'a> T: AddAssign<&'a T>,
+    {
+        PDF {
+            data: self
+                .data
+                .iter()
+                .rev()
+                .scan(T::zero(), |state, (k, v)| {
+                    *state += v;
+                    Some((*k, state.clone()))
+                })
+                .collect(),
+        }
+    }
+
+    /// Return the reverse cumulative version of this PDf.
+    /// P(X>x)
+    pub fn rev_cumulative_exclusive(&self) -> PDF<T, false>
+    where
+        for<'a> T: AddAssign<&'a T>,
+    {
+        PDF {
+            data: self
+                .data
+                .iter()
+                .rev()
+                .scan(T::zero(), |state, (k, v)| {
+                    let val = state.clone();
+                    *state += v;
+                    Some((*k, val))
+                })
+                .collect(),
+        }
+    }
+
+    pub fn with_advantage(&mut self, n: isize)
+    where
+        for<'a> T: AddAssign<&'a T>,
+        for<'a> T: Sub<&'a T, Output = T>,
+    {
+        self.data
+            .values_mut()
+            // Convert it to P(X<x)^(n+1)
+            .scan(T::zero(), |state, v| {
+                let tmp = state.clone();
+                *state += v;
+                *v = num::pow(tmp, n as usize);
+                Some(v)
+            })
+            // Add leading 1
+            .chain([T::one()].iter_mut())
+            .map_windows(|a: &mut [&mut T; 2]| {
+                *a[0] = (*a[1]).clone() - &*a[0];
+                a
+            })
+            .for_each(drop);
     }
 }
 
