@@ -3,6 +3,7 @@ use std::{
     ops::{Add, AddAssign, Div, Mul, MulAssign, Range, Sub},
 };
 
+use itertools::Itertools;
 use num::{FromPrimitive, Num, One, ToPrimitive};
 
 use crate::LlDoiceError;
@@ -221,7 +222,29 @@ impl<T: Number, const SOUND: bool> PDF<T, SOUND> {
         for<'a> T: AddAssign<&'a T>,
         for<'a> T: Sub<&'a T, Output = T>,
     {
-        self.data
+        // Naive implementation
+        // let cumulative: Vec<_> = self
+        //     .data
+        //     .values()
+        //     // Convert it to P(X<x)^(n+1)
+        //     .scan(T::zero(), |state, v| {
+        //         let tmp = state.clone();
+        //         *state += v;
+        //         Some(num::pow(tmp, n as usize))
+        //     })
+        //     // Add trailing 1
+        //     .chain([T::one()])
+        //     .collect();
+
+        // for (i, v) in self.data.values_mut().enumerate() {
+        //     *v = cumulative[i + 1].clone() - &cumulative[i];
+        // }
+
+        // Implementation that allocates no additional buffers
+        let mut one = [T::one()];
+        // Convert it to P(X<x)^(n+1) with a trailing 1
+        let mut iter = self
+            .data
             .values_mut()
             // Convert it to P(X<x)^(n+1)
             .scan(T::zero(), |state, v| {
@@ -230,13 +253,14 @@ impl<T: Number, const SOUND: bool> PDF<T, SOUND> {
                 *v = num::pow(tmp, n as usize);
                 Some(v)
             })
-            // Add leading 1
-            .chain([T::one()].iter_mut())
-            .map_windows(|a: &mut [&mut T; 2]| {
-                *a[0] = (*a[1]).clone() - &*a[0];
-                a
-            })
-            .for_each(drop);
+            // Add trailing 1
+            .chain(one.iter_mut())
+            .peekable();
+
+        // Then, collapse it into the final distribution
+        while let Some(first) = iter.next() {
+            *first = (*iter.peek().expect("Bring me another")).clone() - &*first;
+        }
     }
 }
 
