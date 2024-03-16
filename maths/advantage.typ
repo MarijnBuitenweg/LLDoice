@@ -61,7 +61,7 @@ This is more difficult to implement for arbitrary random variables than the simp
 = Disadvantage
 From @general-adv-eq, it follows that disadvantage can be based on the following
 $ P(X = min(x_1, ...,x_n)) = product^n_(i=1) P(X >= x_i) - product^n_(i=1) P(X > x_i) $ <general-disadv-eq>
-, and the algorithm for $x_1 = x_2$ is:
+, and the algorithm for $x_1 = x_2$ might be (confirm with testing):
 + Let a = $P(X>x)^(n+1) "with a leading 1"$
 + Then $P_a (X=x) = a[x] - a[x+1]$
 
