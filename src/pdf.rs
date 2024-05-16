@@ -278,26 +278,28 @@ impl<T: Number, const SOUND: bool> PDF<T, SOUND> {
     }
 
     pub fn get_nearest_below(&self, bound: Sample) -> Option<(&Sample, &T)> {
-        self.data.upper_bound(Bound::Included(&bound)).key_value()
+        self.data.upper_bound(Bound::Included(&bound)).next()
     }
 
     pub fn get_value_below(&self, bound: Sample) -> T {
         self.data
             .upper_bound(Bound::Included(&bound))
-            .value()
+            .next()
+            .map(|(_, v)| v)
             .cloned()
             .or_else(|| Some(T::zero()))
             .unwrap()
     }
 
     pub fn get_nearest_above(&self, bound: Sample) -> Option<(&Sample, &T)> {
-        self.data.lower_bound(Bound::Included(&bound)).key_value()
+        self.data.lower_bound(Bound::Included(&bound)).next()
     }
 
     pub fn get_value_above(&self, bound: Sample) -> T {
         self.data
             .lower_bound(Bound::Included(&bound))
-            .value()
+            .next()
+            .map(|(_, v)| v)
             .cloned()
             .or_else(|| Some(T::zero()))
             .unwrap()
@@ -399,10 +401,4 @@ impl<T: Number, const SOUND: bool> Div for &PDF<T, SOUND> {
         }
         PDF { data }
     }
-}
-
-/// Continuous PDF, to be implemented later
-pub struct CPDF<T> {
-    data: BTreeMap<Sample, T>,
-    bounds: (f64, f64),
 }

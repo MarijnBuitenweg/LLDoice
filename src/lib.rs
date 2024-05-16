@@ -11,9 +11,9 @@
 mod error;
 pub mod numerics;
 mod pdf;
+mod traits;
 
 pub use error::LlDoiceError;
-pub use pdf::CPDF;
 pub use pdf::PDF;
 
 #[cfg(test)]
