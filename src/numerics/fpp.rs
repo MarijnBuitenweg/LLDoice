@@ -31,7 +31,7 @@ impl Fpp {
     /// Performs a bounds check on an arbitrary numeric type.
     fn check_bounds<T: Num + PartialOrd>(value: T) -> Result<T, LlDoiceError> {
         if !Self::bounds().contains(&value) {
-            return Err(LlDoiceError::InvalidProbaility);
+            return Err(LlDoiceError::InvalidProbability);
         }
         Ok(value)
     }

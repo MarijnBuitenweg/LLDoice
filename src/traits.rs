@@ -1,3 +1,5 @@
+use crate::LlDoiceError;
+
 type Sample = f64;
 type DSample = isize;
 
@@ -5,16 +7,37 @@ type DSample = isize;
 /// The API is very loosely based on the one used in `russell_stat`, but much more elaborate.
 /// # Usage
 ///
-pub trait ProbabilityDistribution<Prob, const SOUND: bool, Cont: ContPdf<Prob>, Disc: DiscPdf<Prob>>
+pub trait ProbabilityDistribution<Prob, const SOUND: bool>
+where
+    Self: Sized,
 {
+    type Cont: ContPdf<Prob, SOUND>;
+    type Disc: DiscPdf<Prob, SOUND>;
+
+    // Basic interaction
     /// Exposes continuous operations.
-    fn c(&mut self) -> Cont;
+    fn c(&mut self) -> Self::Cont;
     /// Exposes discrete operations.
-    fn d(&mut self) -> Disc;
+    fn d(&mut self) -> Self::Disc;
+
+    // Soundness mechanism
+    /// You better implement this correctly!
+    fn is_sound(&self) -> bool;
+    /// Checks if the distribution is valid. Basically a no-op when the distribution is already validated.
+    fn validate(self) -> Result<impl ProbabilityDistribution<Prob, true>, LlDoiceError> {
+        if SOUND || self.is_sound() {
+            Ok(unsafe { self.assert_soundness() })
+        } else {
+            Err(LlDoiceError::InvalidProbability)
+        }
+    }
+    unsafe fn assert_soundness(self) -> impl ProbabilityDistribution<Prob, true>;
 }
 
 /// For discrete operations, it should be possible to provide a lot of default implementations.
-pub trait DiscPdf<Prob> {
+pub trait DiscPdf<Prob, const SOUND: bool> {
+    type Base: ProbabilityDistribution<Prob, SOUND>;
+
     // Basic usage
     fn p(&self, x: DSample) -> Prob;
     fn sample(&self) -> DSample;
@@ -30,7 +53,9 @@ pub trait DiscPdf<Prob> {
     //
 }
 
-pub trait ContPdf<Prob> {
+pub trait ContPdf<Prob, const SOUND: bool> {
+    type Base: ProbabilityDistribution<Prob, SOUND>;
+
     // Basic usage
     fn p(&self, x: Sample) -> Prob;
     fn sample(&self) -> Sample;
@@ -48,12 +73,7 @@ mod api_test {
     use super::*;
 
     trait GenDist {
-        fn dist<
-            Prob,
-            Cont: ContPdf<Prob>,
-            Disc: DiscPdf<Prob>,
-            PDF: ProbabilityDistribution<Prob, true, Cont, Disc>,
-        >() -> PDF;
+        fn dist<Prob, PDF: ProbabilityDistribution<Prob, true>>() -> PDF;
     }
 
     struct Literal {
@@ -61,12 +81,7 @@ mod api_test {
     }
 
     impl GenDist for Literal {
-        fn dist<
-            Prob,
-            Cont: ContPdf<Prob>,
-            Disc: DiscPdf<Prob>,
-            PDF: ProbabilityDistribution<Prob, true, Cont, Disc>,
-        >() -> PDF {
+        fn dist<Prob, PDF: ProbabilityDistribution<Prob, true>>() -> PDF {
             todo!()
         }
     }

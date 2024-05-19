@@ -103,7 +103,7 @@ impl<T: Number, const SOUND: bool> PDF<T, SOUND> {
         if Self::check_total(&self.data) {
             Ok(PDF { data: self.data })
         } else {
-            Err(LlDoiceError::InvalidProbaility)
+            Err(LlDoiceError::InvalidProbability)
         }
     }
 
