@@ -49,6 +49,7 @@ pub trait DiscPdf<Prob, const SOUND: bool> {
     // Operations
     fn advantage(&mut self);
     fn autoconvolute(&mut self, n: usize);
+    fn cumulative(&self) -> impl ProbabilityDistribution<Prob, false>;
 
     //
 }
