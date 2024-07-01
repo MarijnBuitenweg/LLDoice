@@ -5,7 +5,14 @@ type DSample = isize;
 
 /// Most general representation of a probability distribution.
 /// The API is very loosely based on the one used in `russell_stat`, but much more elaborate.
-/// # Usage
+/// # Soundness
+/// The type-level SOUND flag is used to keep track of whether it can be guaranteed that the distribution is mathematically sound.
+/// The requirements for 'soundness' are the following:
+/// - All probabilities must be between 0 and 1 inclusively
+/// - The sum of all probabilities must be within MAX_ERROR of 1
+/// Some operations leave the distribution in a state where soundness cannot be guaranteed,
+///  this can be seen in the return type of these operations (SOUND = false).
+/// Use the validate function to re-assert type-level guarantees.
 ///
 pub trait ProbabilityDistribution<Prob, const SOUND: bool>
 where
